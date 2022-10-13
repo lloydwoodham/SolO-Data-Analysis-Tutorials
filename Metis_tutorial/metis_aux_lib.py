@@ -33,8 +33,7 @@ def get_linspace_arr(val1, val2, dval):
     """
     num = (val2 - val1) / dval
     num = np.around(num, decimals=0)
-    arr = np.linspace(val1, val2, int(num)+1)
-    return arr
+    return np.linspace(val1, val2, int(num)+1)
 
 
 def cart_to_polar_v1(img_arr, r_arr, phi_arr, xc, yc, rsun_pix, rot_angle=None, cval=0.0):
@@ -85,8 +84,7 @@ def cart_to_polar_v1(img_arr, r_arr, phi_arr, xc, yc, rsun_pix, rot_angle=None, 
             yc + (r) / (1.0+np.tan(np.deg2rad(phi_arr/2.0))**2.0) * 2.0*np.tan(np.deg2rad(phi_arr/2.0))
         )
     polar_inds = np.array([polar_inds_y, polar_inds_x])  #  NB: index sequence not like in idl: img_arr[x,y]
-    polar_img_arr = ndimage.map_coordinates(img_arr, polar_inds, order=1, cval=cval)
-    return polar_img_arr
+    return ndimage.map_coordinates(img_arr, polar_inds, order=1, cval=cval)
 
 
 def cart_to_polar(img_arr, r_arr, phi_arr, xc, yc, rsun_pix, rot_angle=None, cval=0.0):
@@ -132,8 +130,7 @@ def cart_to_polar(img_arr, r_arr, phi_arr, xc, yc, rsun_pix, rot_angle=None, cva
     polar_repr = CylindricalRepresentation(r_matrix, phi_matrix*u.deg, np.zeros(r_matrix.shape))
     cart_repr = polar_repr.to_cartesian()
     polar_inds = np.array([cart_repr.y + yc, cart_repr.x + xc])  #  NB: index sequence not like in IDL: img_arr[x,y]
-    polar_img_arr = ndimage.map_coordinates(img_arr, polar_inds, order=1, cval=cval)
-    return polar_img_arr
+    return ndimage.map_coordinates(img_arr, polar_inds, order=1, cval=cval)
 
 
 def cut_img_arr_fov(img_arr, xc, yc, rsun_pix, r1, r2, cval=np.nan):
@@ -323,10 +320,7 @@ def poly_fun(x, *aks):
         The value of polinomial function.
 
     """
-    f = 0
-    for i in range(len(aks)):
-        f += x[:,i] * aks[i]
-    return f
+    return sum(x[:,i] * aks[i] for i in range(len(aks)))
 
 
 def get_Ar_Br(r, q=0.75):
@@ -383,9 +377,9 @@ def fun_to_int_Gkx(r, x, k, q):
     
     """
     A, B = get_Ar_Br(r, q=q)
-    fun = A * 2*r**(-k+1)/np.sqrt(r**2-x**2)  +  \
-          (B-A) * r**(-k-1) * x**2/np.sqrt(r**2-x**2)
-    return fun
+    return A * 2 * r ** (-k + 1) / np.sqrt(r**2 - x**2) + (B - A) * r ** (
+        -k - 1
+    ) * x**2 / np.sqrt(r**2 - x**2)
 
 
 def fun_to_int_pGkx(r, x, k, q):
@@ -412,8 +406,7 @@ def fun_to_int_pGkx(r, x, k, q):
     
     """
     A, B = get_Ar_Br(r, q=q)
-    fun = (A-B) * r**(-k-1) * x**2/np.sqrt(r**2-x**2)
-    return fun
+    return (A-B) * r**(-k-1) * x**2/np.sqrt(r**2-x**2)
 
 
 def calc_Gkx_pGkx(x_arr, k_arr, q):
@@ -529,7 +522,7 @@ def calc_el_dens_and_K(pB_polar, r_arr, k_arr=[1, 2, 3, 4], q=0.63,
         dens_polar.append(n_r)
     ak_arr = np.array(ak_arr)
     dens_polar = np.array(dens_polar).transpose()
-    
+
     ### Calculating K-corona ###
     K_polar = np.matmul(Gkx, ak_arr.transpose())
     if negative_val is not None:

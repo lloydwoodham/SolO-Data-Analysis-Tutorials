@@ -69,11 +69,7 @@ def spectro_plot(eflux, time, xlabel=None, ylabel=None,
         cmap.set_bad('White',0.)
 
     # normalize colormapping
-    if lognorm and vmin>0.:
-        norm=colors.LogNorm(vmin=vmin, vmax=vmax)
-    else:
-        norm=None
-
+    norm = colors.LogNorm(vmin=vmin, vmax=vmax) if lognorm and vmin>0. else None
     c = ax.pcolormesh(x1, y1, X, cmap=cmap, norm=norm, edgecolors="face")
     cbar = matplotlib.pyplot.colorbar(c,ax=ax, norm=norm)
     if zlabel:

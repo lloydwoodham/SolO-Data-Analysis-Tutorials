@@ -28,7 +28,7 @@ def load_field_stop(path = None):
     
     return field_stop
 
-def plot_fdt_phys_obs(inver_data, suptitle = None): 
+def plot_fdt_phys_obs(inver_data, suptitle = None):
     """plot the physical observables from fdt
     
     Parameters
@@ -48,27 +48,27 @@ def plot_fdt_phys_obs(inver_data, suptitle = None):
     binc = inver_data[2,:,:]
     bazi = inver_data[3,:,:]
     blos = inver_data[5,:,:]
-    
+
     fig, (ax1, ax2, ax3) = plt.subplots(3,2, figsize = (15,18))
 
     im4 = ax1[0].imshow(icnt, cmap = "gist_heat", origin="lower") #continuum
     im1 = ax1[1].imshow(bmag, cmap = "plasma", origin="lower") #field strength
     im2 = ax2[0].imshow(binc, cmap = "RdGy", origin="lower") #field inclination
     im3 = ax2[1].imshow(bazi, cmap = "viridis", origin="lower") #field azimuth
-    
+
     #mean correct vlos
     vlos2 = inver_data[4,:,:]
     vlos3 = vlos2 - np.mean(inver_data[4,512:1535,512:1535])
-        
+
     seis = plt.cm.seismic
     norm = plt.Normalize(-2, 2, clip = True)
     rgba_4 = seis(norm(vlos3))
-        
+
     gray = plt.cm.gray
     norm = plt.Normalize(-100, 100, clip = True)
     rgba_5 = gray(norm(blos))
-    
-    im5 = ax3[0].imshow(rgba_4, cmap = seis, origin="lower") 
+
+    im5 = ax3[0].imshow(rgba_4, cmap = seis, origin="lower")
     im6 = ax3[1].imshow(rgba_5, cmap = gray, origin="lower")
 
     fig.colorbar(im4, ax=ax1[0],fraction=0.046, pad=0.04)
@@ -86,27 +86,27 @@ def plot_fdt_phys_obs(inver_data, suptitle = None):
     im6.set_clim(-100,100)
 
     ax1[1].set_title(r'Magnetic Field Strength [Gauss]')
-    ax2[0].set_title(f'Inclination [Degrees]')
+    ax2[0].set_title('Inclination [Degrees]')
     ax2[1].set_title(r'Azimuth [Degrees]')
     ax1[0].set_title("Continuum Intensity")#f'LOS Magnetic Field (Gauss)')
     ax3[0].set_title(r'Vlos [km/s]')
     ax3[1].set_title(r'Blos [Gauss]')
-    
+
     ax1[0].text(35,40, '(a)', color = "white", size = 'x-large')
     ax1[1].text(35,40, '(b)', color = "white", size = 'x-large')
     ax2[0].text(35,40, '(c)', color = "white", size = 'x-large')
     ax2[1].text(35,40, '(d)', color = "white", size = 'x-large')
     ax3[0].text(35,40, '(e)', color = "white", size = 'x-large')
     ax3[1].text(35,40, '(f)', color = "white", size = 'x-large')
-    
+
     if suptitle is not None:
         fig.suptitle(suptitle)
-        
+
     plt.tight_layout()
     plt.show()
 
 
-def plot_hrt_phys_obs(inver_data, suptitle = None, field_stop = None): 
+def plot_hrt_phys_obs(inver_data, suptitle = None, field_stop = None):
     """plot the physical observables from hrt
     
     Parameters
@@ -125,59 +125,59 @@ def plot_hrt_phys_obs(inver_data, suptitle = None, field_stop = None):
     """
     if field_stop is None:
         field_stop = load_field_stop()[:,::-1]
-        
+
     inver_data *= field_stop[np.newaxis,:,:]
-        
+
     fs_idx = np.where(field_stop < 1)
-    
+
     #create custom colormaps that are black in the field stop region
     gist = plt.cm.gist_heat
     norm = plt.Normalize(0, 1.2, clip = True)
     rgba_0 = gist(norm(inver_data[0,:,:]))
     rgba_0[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     plasma = plt.cm.plasma
     norm = plt.Normalize(0, 1000, clip = True)
     rgba_1 = plasma(norm(inver_data[1,:,:]))
     rgba_1[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     rdgy = plt.cm.RdGy
     norm = plt.Normalize(0, 180)
     rgba_2 = rdgy(norm(inver_data[2,:,:]))
     rgba_2[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     viridis = plt.cm.viridis
     norm = plt.Normalize(0, 180)
     rgba_3 = viridis(norm(inver_data[3,:,:]))
     rgba_3[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     fig, (ax1, ax2, ax3) = plt.subplots(3,2, figsize = (15,18))
 
     im4 = ax1[0].imshow(rgba_0, cmap = gist, origin="lower") #continuum
     im1 = ax1[1].imshow(rgba_1, cmap = plasma, origin="lower") #field strength
     im2 = ax2[0].imshow(rgba_2, cmap = rdgy, origin="lower") #field inclination
     im3 = ax2[1].imshow(rgba_3, cmap = viridis, origin="lower") #field azimuth
-    
+
     #mean correct vlos
     vlos2 = inver_data[4,:,:]
     vlos3 = vlos2 - np.mean(inver_data[4,512:1535,512:1535])
     blos = inver_data[1,:,:] * np.cos(inver_data[2,:,:]/180*np.pi) #vlos
-    
+
     if field_stop is not None:
         blos *= field_stop
         vlos3 *= field_stop
-        
+
     seis = plt.cm.seismic
     norm = plt.Normalize(-2, 2, clip = True)
     rgba_4 = seis(norm(vlos3))
     rgba_4[fs_idx[0],fs_idx[1], :3] = 0,0,0
-        
+
     gray = plt.cm.gray
     norm = plt.Normalize(-100, 100, clip = True)
     rgba_5 = gray(norm(blos))
     rgba_5[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
-    im5 = ax3[0].imshow(rgba_4, cmap = seis, origin="lower") 
+
+    im5 = ax3[0].imshow(rgba_4, cmap = seis, origin="lower")
     im6 = ax3[1].imshow(rgba_5, cmap = gray, origin="lower")
 
     fig.colorbar(im4, ax=ax1[0],fraction=0.046, pad=0.04)
@@ -195,22 +195,22 @@ def plot_hrt_phys_obs(inver_data, suptitle = None, field_stop = None):
     im6.set_clim(-100,100)
 
     ax1[1].set_title(r'Magnetic Field Strength [Gauss]')
-    ax2[0].set_title(f'Inclination [Degrees]')
+    ax2[0].set_title('Inclination [Degrees]')
     ax2[1].set_title(r'Azimuth [Degrees]')
     ax1[0].set_title("Continuum Intensity")#f'LOS Magnetic Field (Gauss)')
     ax3[0].set_title(r'Vlos [km/s]')
     ax3[1].set_title(r'Blos [Gauss]')
-    
+
     ax1[0].text(35,40, '(a)', color = "white", size = 'x-large')
     ax1[1].text(35,40, '(b)', color = "white", size = 'x-large')
     ax2[0].text(35,40, '(c)', color = "white", size = 'x-large')
     ax2[1].text(35,40, '(d)', color = "white", size = 'x-large')
     ax3[0].text(35,40, '(e)', color = "white", size = 'x-large')
     ax3[1].text(35,40, '(f)', color = "white", size = 'x-large')
-    
+
     if suptitle is not None:
         fig.suptitle(suptitle)
-        
+
     plt.tight_layout()
     plt.show()
     
@@ -242,7 +242,7 @@ def get_wv_arr_and_ic_wv(file,num_wl = 6,verbose = False):
         header = hdu_list[fg_head].data
         tunning_constant = float(header[0][4])/1e9
         ref_wavelength = float(header[0][5])/1e3
-        
+
         voltagesData = np.zeros(num_wl)
         hi = np.histogram(header['PHI_FG_voltage'],bins=7)
         yi = hi[0]; xi = hi[1]
@@ -255,13 +255,10 @@ def get_wv_arr_and_ic_wv(file,num_wl = 6,verbose = False):
                     idx = np.logical_and(header['PHI_FG_voltage']>=xi[i],header['PHI_FG_voltage']<=xi[i+1])
                 voltagesData[j] = int(np.median(header['PHI_FG_voltage'][idx]))
                 j += 1
-    
+
     d1 = voltagesData[0] - voltagesData[1]
     d2 = voltagesData[num_wl-2] - voltagesData[num_wl-1]
-    if np.abs(d1) > np.abs(d2):
-        cpos = 0
-    else:
-        cpos = num_wl-1
+    cpos = 0 if np.abs(d1) > np.abs(d2) else num_wl-1
     if verbose:
         print('Continuum position at wave: ', cpos)
     wave_axis = voltagesData*tunning_constant + ref_wavelength  #6173.3356
@@ -288,15 +285,15 @@ def plot_fdt_stokes(stokes_arr, wv, subsec = None, title = None):
     """
     fig, (ax1, ax2) = plt.subplots(2,2, figsize = (15,12))
 
-    
+
     gist = plt.cm.gist_heat
     norm = plt.Normalize(-0.01, 0.01, clip = True)
     rgba_0 = gist(norm(stokes_arr[wv,1,:,:]))
-    
+
     rgba_1 = gist(norm(stokes_arr[wv,2,:,:]))
-    
+
     rgba_2 = gist(norm(stokes_arr[wv,3,:,:]))
-    
+
     if subsec is not None:
         start_row, end_row = subsec[2:4]
         start_col, end_col = subsec[:2]
@@ -305,39 +302,39 @@ def plot_fdt_stokes(stokes_arr, wv, subsec = None, title = None):
         assert end_row >= 0 and end_row < 2048
         assert start_col >= 0 and start_col < 2048
         assert end_col >= 0 and end_col < 2048
-        
+
     else:
         start_row, start_col = 0,0
         end_row, end_col = stokes_arr.shape[2]-1,stokes_arr.shape[3]-1
-        
-    
-    im1 = ax1[0].imshow(stokes_arr[wv,0,start_row:end_row,start_col:end_col], cmap = "gist_heat", origin="lower") 
+
+
+    im1 = ax1[0].imshow(stokes_arr[wv,0,start_row:end_row,start_col:end_col], cmap = "gist_heat", origin="lower")
     im2 = ax1[1].imshow(rgba_0[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
-    im3 = ax2[0].imshow(rgba_1[start_row:end_row,start_col:end_col], cmap = gist, origin="lower") 
+    im3 = ax2[0].imshow(rgba_1[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
     im4 = ax2[1].imshow(rgba_2[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
 
     fig.colorbar(im1, ax=ax1[0],fraction=0.046, pad=0.04)
     fig.colorbar(im2, ax=ax1[1],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
     fig.colorbar(im3, ax=ax2[0],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
     fig.colorbar(im4, ax=ax2[1],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
-    
+
     clim = 0.01
 
     im1.set_clim(0, 1.2)
     im2.set_clim(-clim, clim)
     im3.set_clim(-clim, clim)
     im4.set_clim(-clim, clim)
-    
+
     ax1[0].set_title(r'I/<I_c>')
-    ax1[1].set_title(f'Q/<I_c>')
+    ax1[1].set_title('Q/<I_c>')
     ax2[0].set_title(r'U/<I_c>')
-    ax2[1].set_title(f'V/<I_c>')
+    ax2[1].set_title('V/<I_c>')
 
     ax1[0].text(35,40, '(a)', color = "white", size = 'x-large')
     ax1[1].text(35,40, '(b)', color = "white", size = 'x-large')
     ax2[0].text(35,40, '(c)', color = "white", size = 'x-large')
     ax2[1].text(35,40, '(d)', color = "white", size = 'x-large')
-    
+
     if isinstance(title,str):
          plt.suptitle(title)
     else:
@@ -366,23 +363,20 @@ def plot_hrt_stokes(stokes_arr, wv, subsec = None, title = None, field_stop = No
     """
     fig, (ax1, ax2) = plt.subplots(2,2, figsize = (15,12))
 
-    if field_stop is None:
-        fs = load_field_stop()[:,::-1]
-    else:
-        fs = field_stop
+    fs = load_field_stop()[:,::-1] if field_stop is None else field_stop
     fs_idx = np.where(fs < 1)
-    
+
     gist = plt.cm.gist_heat
     norm = plt.Normalize(-0.01, 0.01, clip = True)
     rgba_0 = gist(norm(stokes_arr[:,:,1,wv]))
     rgba_0[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     rgba_1 = gist(norm(stokes_arr[:,:,2,wv]))
     rgba_1[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     rgba_2 = gist(norm(stokes_arr[:,:,3,wv]))
     rgba_2[fs_idx[0],fs_idx[1], :3] = 0,0,0
-    
+
     if subsec is not None:
         start_row, end_row = subsec[2:4]
         start_col, end_col = subsec[:2]
@@ -391,39 +385,39 @@ def plot_hrt_stokes(stokes_arr, wv, subsec = None, title = None, field_stop = No
         assert end_row >= 0 and end_row < 2048
         assert start_col >= 0 and start_col < 2048
         assert end_col >= 0 and end_col < 2048
-        
+
     else:
         start_row, start_col = 0,0
         end_row, end_col = stokes_arr.shape[0]-1,stokes_arr.shape[0]-1
-        
-    
-    im1 = ax1[0].imshow(stokes_arr[start_row:end_row,start_col:end_col,0,wv], cmap = "gist_heat", origin="lower") 
+
+
+    im1 = ax1[0].imshow(stokes_arr[start_row:end_row,start_col:end_col,0,wv], cmap = "gist_heat", origin="lower")
     im2 = ax1[1].imshow(rgba_0[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
-    im3 = ax2[0].imshow(rgba_1[start_row:end_row,start_col:end_col], cmap = gist, origin="lower") 
+    im3 = ax2[0].imshow(rgba_1[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
     im4 = ax2[1].imshow(rgba_2[start_row:end_row,start_col:end_col], cmap = gist, origin="lower")
 
     fig.colorbar(im1, ax=ax1[0],fraction=0.046, pad=0.04)
     fig.colorbar(im2, ax=ax1[1],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
     fig.colorbar(im3, ax=ax2[0],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
     fig.colorbar(im4, ax=ax2[1],fraction=0.046, pad=0.04,ticks=[-0.01, -0.005, 0, 0.005, 0.01])
-    
+
     clim = 0.01
 
     im1.set_clim(0, 1.2)
     im2.set_clim(-clim, clim)
     im3.set_clim(-clim, clim)
     im4.set_clim(-clim, clim)
-    
+
     ax1[0].set_title(r'I/<I_c>')
-    ax1[1].set_title(f'Q/<I_c>')
+    ax1[1].set_title('Q/<I_c>')
     ax2[0].set_title(r'U/<I_c>')
-    ax2[1].set_title(f'V/<I_c>')
+    ax2[1].set_title('V/<I_c>')
 
     ax1[0].text(35,40, '(a)', color = "white", size = 'x-large')
     ax1[1].text(35,40, '(b)', color = "white", size = 'x-large')
     ax2[0].text(35,40, '(c)', color = "white", size = 'x-large')
     ax2[1].text(35,40, '(d)', color = "white", size = 'x-large')
-    
+
     if isinstance(title,str):
          plt.suptitle(title)
     else:

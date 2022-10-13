@@ -22,12 +22,9 @@ def load_tswf(filepath):
     print('loading ' + filepath)
     cdf = cdflib.CDF(filepath)
 
-    data = {}
     info = cdf.cdf_info()
     varnames = info['zVariables']
-    for varname in varnames:
-        data[varname] = cdf.varget(varname)
-    return data
+    return {varname: cdf.varget(varname) for varname in varnames}
 
 
 # Download TDS-SURV-TSWF cdf file for a given date.
@@ -41,7 +38,7 @@ def download_tswf(date=datetime.datetime(2021,10,9), output_dir='Download'):
     descriptor = 'RPW-TDS-SURV-TSWF-E'
 
     try:
-        y = int(date[0:4])
+        y = int(date[:4])
         m = int(date[5:7])
         d = int(date[8:10])
     except:
@@ -53,7 +50,7 @@ def download_tswf(date=datetime.datetime(2021,10,9), output_dir='Download'):
     if os.path.isdir(output_dir) == False:
         os.makedirs(output_dir)
     # Looking for metadata
-    instru = descriptor[0:3]
+    instru = descriptor[:3]
     date1 = datetime.datetime(y, m, d, 0, 0, 0, 0)
     date0 = date1 - datetime.timedelta(days=1)
     date0 = date0.strftime('%Y-%m-%' + 'd')
@@ -63,18 +60,14 @@ def download_tswf(date=datetime.datetime(2021,10,9), output_dir='Download'):
     myfile = pandas.read_csv(f)
     # Saving data_item_id to list
     fullnamelist = myfile.data_item_id.tolist()
-    namelist = []
-    index = 0
-    for i in myfile.descriptor.tolist():
-        if descriptor in i:
-            namelist.append(fullnamelist[index])
-        index += 1
+    namelist = [
+        fullnamelist[index]
+        for index, i in enumerate(myfile.descriptor.tolist())
+        if descriptor in i
+    ]
 
-    # Dowloading with wget
-    progress = 1
-    for data_item_id in namelist:
+    for progress, data_item_id in enumerate(namelist, start=1):
         print(data_item_id + 'item ' + str(progress) + '/' + str(len(namelist)) + '\n')
-        progress += 1
         # outFilename = os.path.join(output_dir, data_item_id + '.cdf')
         # print(outFilename)
         url = 'http://soar.esac.esa.int/soar-sl-tap/data?retrieval_type=LAST_PRODUCT&data_item_id=' + data_item_id + '&product_type=SCIENCE'
@@ -119,8 +112,7 @@ def convert_to_SRF(data, index=0):
     ww = data['WAVEFORM_DATA'][index, :, 0:nsamp]
     # projection: E = MAT(ANT->SRF) * V; where MAT(2,2) and V is observed field
     M = np.linalg.inv(M)
-    E = np.dot(M, ww[0:2, :]) * 1e3  # transformation into SRF (Y-Z) in (mV/m)
-    return E
+    return np.dot(M, ww[0:2, :]) * 1e3
 
 
 # Waveform plot
@@ -157,10 +149,7 @@ def plot_spectrum(ww, t0, sr, rec):
     power_spectrum = np.square(abs_fourier_transform)
     frequency = np.linspace(0, sr / 2, len(power_spectrum[0, :]))
     xmin = (np.abs(frequency - 200)).argmin()
-    if sr > 300000:
-        fmax = 200000
-    else:
-        fmax = 100000
+    fmax = 200000 if sr > 300000 else 100000
     xmax = (np.abs(frequency - fmax)).argmin()
 
     plt.plot(frequency[xmin:xmax] * 1e-3, power_spectrum[0, xmin:xmax])
