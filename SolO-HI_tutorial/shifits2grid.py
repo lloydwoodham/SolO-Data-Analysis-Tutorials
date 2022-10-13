@@ -62,21 +62,21 @@ def match_files(dates, path='', prep=False):
  for i in range(n):
     dets.append(hlist[i]['detector'])
     times.append(hlist[i]['date-avg'])
-  
+
  w1 = [i for i, j in enumerate(dets) if j == '1']  
  w2 = [i for i, j in enumerate(dets) if j == '2']
  w3 = [i for i, j in enumerate(dets) if j == '3']
  w4 = [i for i, j in enumerate(dets) if j == '4']  
- 
- 
+
+
  dm, loc = min((dm, loc) for (loc, dm) in enumerate([len(w1),len(w2),len(w3),len(w4)]))
- 
+
  mos_inx=np.zeros([dm, 4])
  t=Time(times)
  #round times to nearest 20 minutes (gives better performance)
  mj=t.mjd
  mj=np.around((mj-mj[0])*1200)
-   
+
  if loc == 0:
      wbase=w1
  elif loc == 1:
@@ -93,7 +93,7 @@ def match_files(dates, path='', prep=False):
      d3, l3 = min((d3, l3) for (l3, d3) in enumerate(abs(mj[w3]-bt)))     
      d4, l4 = min((d4, l4) for (l4, d4) in enumerate(abs(mj[w4]-bt)))
      mos_inx[i,:]=[w1[l1],w2[l2],w3[l3],w4[l4]]    
-     
+
  return hlist, imgs[0:n,:,:], mos_inx.astype(int)
          
 #combine files from each detecctor into mosaic
@@ -223,7 +223,7 @@ def solohi_prep(hdr, img=''):
 def shi_mov_cube(hlist, imgs, mos_inx, prep=False):
     #create outputs
     n=mos_inx.shape
-    
+
     proc_img=np.zeros([n[0], 2072, 2008], dtype=np.float16)
     mos_times=[]
     hdrs=[]
@@ -246,7 +246,7 @@ def shi_mov_cube(hlist, imgs, mos_inx, prep=False):
         #combine the individual images into the output array
         proc_img[i,:,:], h=shi_mosaic(hs, imgs=ims, prep=prep, time=tat.isot)
         hdrs.append(h)
-        
+
     return proc_img, hdrs
 
 #perform some basic image processing on the data cube
@@ -301,105 +301,107 @@ def process_cube(img_cube, rdiff=False, ratio=False, median=False, smooth=0, med
 #moviepath: path to save the output movie file
 #moviename: animated movie output
 def run_movie(data, vrange=[0,0], hdrs='', writefits=False, savepath='', scale=False, grid=False, qcheck=False, wcscor=False, redrawwcs=False,proj=False, elongation=[-50,0], latitude=[-25,25], moviepath='', moviename='test.mp4'):
-    s=data.shape
-    #remove nan values
-    data[~np.isfinite(data)]=1
-    inx=0
+ s=data.shape
+ #remove nan values
+ data[~np.isfinite(data)]=1
+ inx=0
 
-    #if needed, establish bytescale
-    if vrange[0]==vrange[1]:
-        vrange=scale_cube(data)
-    
-    #if desired by user, check for excessive pixels in each individual frame for bytescaling
-    if qcheck == True:
-      hdrs2=[]
-      print('Checking individual frames for quality...')
-      for i in range(s[0]):    
-       ba=np.logical_and(data[i,:,:] <= vrange[1], data[i,:,:] >= vrange[0])
-       cnt=np.count_nonzero(np.where(ba)[0])
-       if cnt/(s[1]*s[2]) > .7:
-                if inx==0:
-                    data2=data[i,:,:]
-                    hdrs2.append(hdrs[i])
-                    inx+=1
-                else:
-                    data2=np.dstack((data2, data[i,:,:]))
-                    hdrs2.append(hdrs[i])
-                    inx+=1
-    
-      data=np.transpose(data2, (2,0,1))
-      hdrs=hdrs2  
-      print(inx, ' of ', s[0], ' frames used')
-        
+ #if needed, establish bytescale
+ if vrange[0]==vrange[1]:
+     vrange=scale_cube(data)
+
+ #if desired by user, check for excessive pixels in each individual frame for bytescaling
+ if qcheck == True:
+   hdrs2=[]
+   print('Checking individual frames for quality...')
+   for i in range(s[0]):    
+    ba=np.logical_and(data[i,:,:] <= vrange[1], data[i,:,:] >= vrange[0])
+    cnt=np.count_nonzero(np.where(ba)[0])
+    if cnt/(s[1]*s[2]) > .7:
+             if inx==0:
+                 data2=data[i,:,:]
+                 hdrs2.append(hdrs[i])
+                 inx+=1
+             else:
+                 data2=np.dstack((data2, data[i,:,:]))
+                 hdrs2.append(hdrs[i])
+                 inx+=1
+
+   data=np.transpose(data2, (2,0,1))
+   hdrs=hdrs2  
+   print(inx, ' of ', s[0], ' frames used')
+
     #if desired, write processed output fits files    
-    if writefits == True:
-        print('Writing FITS files...')
-        for i in range(s[0]):
-               times=hdrs[i]['date-avg']
-               x=hdrs[i]['filename'].find('solohi-')
-               pfilename=hdrs[i]['filename'][0:x+7]+'mft_'+times[0:4]+times[5:7]+times[8:13]+times[14:16]+times[17:19]+'_V00.fits'
-               hdrs[i]['filename']=pfilename
-               outdat=data[i,:,:].copy()
-               if scale == True:
-                       outdat=(outdat-vrange[0])/(vrange[1]-vrange[0])*255
-                       outdat[outdat < 0]=0
-                       outdat[outdat > 255]=255
-               htmp=fits.PrimaryHDU(outdat.astype(float), header=hdrs[i])
-               htmp.writeto(savepath+pfilename, overwrite=True)
-    #set up the animation window
-    print('Launching animation...')
-    fig=plt.figure()
-    ax=plt.subplot()
-    if grid==False:
-       im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray')
-       plt.xticks([])
-       plt.yticks([])
-       plt.axis('off')
-    elif proj==True:
-       im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray', extent=[elongation[0], elongation[1], latitude[0], latitude[1]])
-       ax.set_xlabel('HPC Elongation (Deg)')
-       ax.set_ylabel('HPC Latitude (Deg)') 
-       ax.grid(color='white')
-    elif wcscor==True:    
-       wcs=WCS(hdrs[0])
-       ax=plt.subplot(projection=wcs)
-       im=ax.imshow(data[0,:,:], vmin=vrange[0], vmax=vrange[1], cmap='gray', origin='lower')
-       ax.grid(color='white')
-       ax.coords[0].set_format_unit(u.deg)
-       ax.coords[1].set_format_unit(u.deg)
-    else:
-       im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray')
-       ax.grid(color='white')
+ if writefits == True:
+  print('Writing FITS files...')
+  for i in range(s[0]):
+   times=hdrs[i]['date-avg']
+   x=hdrs[i]['filename'].find('solohi-')
+   pfilename = (hdrs[i]['filename'][:x + 7] + 'mft_' + times[:4] + times[5:7] +
+                times[8:13] + times[14:16] + times[17:19] + '_V00.fits')
+   hdrs[i]['filename']=pfilename
+   outdat=data[i,:,:].copy()
+   if scale == True:
+           outdat=(outdat-vrange[0])/(vrange[1]-vrange[0])*255
+           outdat[outdat < 0]=0
+           outdat[outdat > 255]=255
+   htmp=fits.PrimaryHDU(outdat.astype(float), header=hdrs[i])
+   htmp.writeto(savepath+pfilename, overwrite=True)
+ #set up the animation window
+ print('Launching animation...')
+ fig=plt.figure()
+ ax=plt.subplot()
+ if grid==False:
+    im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray')
+    plt.xticks([])
+    plt.yticks([])
+    plt.axis('off')
+ elif proj==True:
+    im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray', extent=[elongation[0], elongation[1], latitude[0], latitude[1]])
+    ax.set_xlabel('HPC Elongation (Deg)')
+    ax.set_ylabel('HPC Latitude (Deg)') 
+    ax.grid(color='white')
+ elif wcscor==True:    
+    wcs=WCS(hdrs[0])
+    ax=plt.subplot(projection=wcs)
+    im=ax.imshow(data[0,:,:], vmin=vrange[0], vmax=vrange[1], cmap='gray', origin='lower')
+    ax.grid(color='white')
+    ax.coords[0].set_format_unit(u.deg)
+    ax.coords[1].set_format_unit(u.deg)
+ else:
+    im=ax.imshow(data[0,:,:], origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray')
+    ax.grid(color='white')
 
-    def init():
-        if hdrs != '':
-           times=hdrs[0]['date-avg']
-           ax.set_title(times)
-        else:
-           im.set_title='Frame: 0'
-        im.set_data(data[0,:,:])
-        return im, ax
+ def init():
+     if hdrs != '':
+        times=hdrs[0]['date-avg']
+        ax.set_title(times)
+     else:
+        im.set_title='Frame: 0'
+     im.set_data(data[0,:,:])
+     return im, ax
 
-    def animate(i, im=im, ax=ax):
-        if hdrs != '':
-           print('Rendering frame ', i+1, 'of', s[0])
-           times=hdrs[i]['date-avg']
-           
-           if grid==True and wcscor==True and redrawwcs==True:
-              wcs=WCS(hdrs[i])
-              ax=plt.subplot(projection=wcs)
-              im=ax.imshow(data[i,:,:], vmin=vrange[0], vmax=vrange[1], cmap='gray', origin='lower')
-              ax.grid(color='white')
-              ax.coords[0].set_format_unit(u.deg)
-              ax.coords[1].set_format_unit(u.deg)
-           else:
-              im.set_data(data[i,:,:])
-           ax.set_title(times)
-        else:
-           ax.set_title('Frame: '+str(i))
-    #animate cube and save the output. ffmpeg arugments can be changed as needed
-    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=data.shape[0], interval=10, blit=True)
-    anim.save(moviepath+moviename, writer=animation.FFMpegWriter(fps=20, extra_args=["-crf", "25", "-s", "864x576", "-vcodec", "libx264"]), dpi=250)
+ def animate(i, im=im, ax=ax):
+  if hdrs != '':
+   print('Rendering frame ', i+1, 'of', s[0])
+   times=hdrs[i]['date-avg']
+
+   if grid==True and wcscor==True and redrawwcs==True:
+      wcs=WCS(hdrs[i])
+      ax=plt.subplot(projection=wcs)
+      im=ax.imshow(data[i,:,:], vmin=vrange[0], vmax=vrange[1], cmap='gray', origin='lower')
+      ax.grid(color='white')
+      ax.coords[0].set_format_unit(u.deg)
+      ax.coords[1].set_format_unit(u.deg)
+   else:
+      im.set_data(data[i,:,:])
+   ax.set_title(times)
+  else:
+   ax.set_title(f'Frame: {str(i)}')
+
+ #animate cube and save the output. ffmpeg arugments can be changed as needed
+ anim = animation.FuncAnimation(fig, animate, init_func=init, frames=data.shape[0], interval=10, blit=True)
+ anim.save(moviepath+moviename, writer=animation.FFMpegWriter(fps=20, extra_args=["-crf", "25", "-s", "864x576", "-vcodec", "libx264"]), dpi=250)
 
 #rudimentary auto-scale function based on gaussian modeling of histograms and standard deviations
 def scale_cube(img_cube):
@@ -466,7 +468,7 @@ def proj_movie(data, hdrs, vrange=[0,0], elongation=[-50,0], latitude=[-25,25], 
 #if display is set to true the output will be displayed
 #if cubic is set to true, use cubic interpolation instead of nearest (will be SLOW)
 def jframe(hdr, img, display=False, vrange=[0,0], cubic=False):
-    
+
     #use(proj_img to get the image into the HPC coordinates
     pimg=proj_img(hdr, img)
     pimg=np.nan_to_num(pimg)
@@ -475,7 +477,7 @@ def jframe(hdr, img, display=False, vrange=[0,0], cubic=False):
     x=np.linspace(-50,0,1000)
     y=np.linspace(-25,25,1000)
     x2, y2 = np.meshgrid(x, y)
-    
+
     #convert the grid to polar coordinates
     rho=-np.sqrt(x2**2+y2**2)
     theta=(np.arctan2(x2,y2))*180/math.pi
@@ -521,65 +523,63 @@ def jmovie(data, hdrs, cubic=False):
 #the jmap will determine the starting location for each strip. the width of the output strip will cover the time
 #from the current file until the next file
 def make_jmap(jmov, hdrs, pa=90, width=10, vrange=[0,0], outx=2000, unit='Deg'):
-    if vrange[0]==vrange[1]:
-       vrange=scale_cube(data) 
-    s=jmov.shape
-    #determine the time span of the whole data cube
-    t1=Time(hdrs[0]['date-avg']).mjd
-    t2=Time(hdrs[s[0]-1]['date-avg']).mjd
-    if outx/s[0] < 10:
-        outx=s[0]*10
-    dsuns=np.zeros(s[0])
-    #convert time span to mintes
-    tspan=(t2-t1)*24*60
-    #get the pixels per minute in the x direction
-    ppm=(outx/tspan)
-    tcur=t1
-    inx=0
-    jimg=np.zeros([1000, outx])
-    for i in range(s[0]):
-        #determine pixel space between files
-        if i < s[0]-1:
-            tnext=Time(hdrs[i+1]['date-avg']).mjd
-            pixw=int(((tnext-tcur)*24*60)*ppm)
-            tcur=tnext
-        else:
-            pixw=outx-1-inx
-        #get the spacecraft distance for each file    
-        dsuns[i]=hdrs[i]['dsun_obs']
-        #fill the output image with the signal from the current file at the right columns
-        jimg[:,inx:inx+pixw]=np.transpose(np.tile(np.median(jmov[i,:,int((pa-45)/90*1000-width/2):int((pa-45)/90*1000+width/2)], axis=1), (pixw,1)))
-        #increase the index of the current file
-        inx+=pixw
-    dsun_obs=np.mean(dsuns)
-    titleu='m'
-    #set the y-axis data of the current file
-    extent=[0, tspan/60, 5, 45]
+ if vrange[0]==vrange[1]:
+    vrange=scale_cube(data)
+ s=jmov.shape
+ #determine the time span of the whole data cube
+ t1=Time(hdrs[0]['date-avg']).mjd
+ t2=Time(hdrs[s[0]-1]['date-avg']).mjd
+ if outx/s[0] < 10:
+     outx=s[0]*10
+ dsuns=np.zeros(s[0])
+ #convert time span to mintes
+ tspan=(t2-t1)*24*60
+ #get the pixels per minute in the x direction
+ ppm=(outx/tspan)
+ tcur=t1
+ inx=0
+ jimg=np.zeros([1000, outx])
+ for i in range(s[0]):
+     #determine pixel space between files
+     if i < s[0]-1:
+         tnext=Time(hdrs[i+1]['date-avg']).mjd
+         pixw=int(((tnext-tcur)*24*60)*ppm)
+         tcur=tnext
+     else:
+         pixw=outx-1-inx
+     #get the spacecraft distance for each file    
+     dsuns[i]=hdrs[i]['dsun_obs']
+     #fill the output image with the signal from the current file at the right columns
+     jimg[:,inx:inx+pixw]=np.transpose(np.tile(np.median(jmov[i,:,int((pa-45)/90*1000-width/2):int((pa-45)/90*1000+width/2)], axis=1), (pixw,1)))
+     #increase the index of the current file
+     inx+=pixw
+ dsun_obs=np.mean(dsuns)
+ titleu='m'
+ #set the y-axis data of the current file
+ extent=[0, tspan/60, 5, 45]
     #if unit is Rs, adjust dsun_obs anad convert elongations
-    if unit=='Rs' or unit=='Rsun' or unit=='RS' or unit=='RSUN': 
-        dsun_obs=dsun_obs/695700000
-        extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))]
-        titleu=unit
-    #if unit is au, adjust dsun_obs anad convert elongations
-    elif unit=='AU' or unit=='au':
-        dsun_obs=dsun_obs/149597870700        
-        extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))] 
-        titleu=unit
-    #if unit is km, adjust dsun_obs anad convert elongations    
-    elif unit=='KM' or unit=='km' or unit=='Km':
-        dsun_obs=dsun_obs/1000         
-        extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))]
-        titleu='km'
-    #if unit isn't recognized keep it in degrees
-    elif unit!= 'Deg' or unit != 'Degrees' or unit != 'DEG' or unit !='DEGREES':
-        print('Invalid unit, using elongation (degrees)')
-    #display the map   
-    ax2=plt.subplot()
-    ax2.imshow(jimg, origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray', extent=extent, aspect='auto')
-    #Set up the axes
-    ax2.set_xlabel('Hrs after Start Time: '+hdrs[0]['date-avg'])
-    ax2.set_ylabel(unit)
-    ax2.set_title('PA='+str(pa)+'\u00B0 Mean S/C Dist ='+str(round(dsun_obs, 3))+' '+titleu)
-    #return the image    
-    return jimg
+ if unit in ['Rs', 'Rsun', 'RS', 'RSUN']: 
+  dsun_obs=dsun_obs/695700000
+  extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))]
+  titleu=unit
+ elif unit in ['AU', 'au']:
+  dsun_obs=dsun_obs/149597870700        
+  extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))] 
+  titleu=unit
+ elif unit in ['KM', 'km', 'Km']:
+  dsun_obs=dsun_obs/1000         
+  extent=[0, tspan/60, dsun_obs*math.sin(math.radians(5)), dsun_obs*math.sin(math.radians(45))]
+  titleu='km'
+ else:
+  print('Invalid unit, using elongation (degrees)')
+ #display the map   
+ ax2=plt.subplot()
+ ax2.imshow(jimg, origin='lower', vmin=vrange[0], vmax=vrange[1], cmap='gray', extent=extent, aspect='auto')
+ #Set up the axes
+ ax2.set_xlabel('Hrs after Start Time: '+hdrs[0]['date-avg'])
+ ax2.set_ylabel(unit)
+ ax2.set_title(f'PA={str(pa)}' + '\u00B0 Mean S/C Dist =' +
+               str(round(dsun_obs, 3)) + ' ' + titleu)
+ #return the image    
+ return jimg
         

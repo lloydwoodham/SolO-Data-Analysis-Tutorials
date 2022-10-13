@@ -20,13 +20,10 @@ def cdf2df(path):
 
         # Get data attributes
         attributes = file.globalattsget(expand=True)
-        
-        df = pd.DataFrame({'BR': B.T[0],
-                        'BT': B.T[1],
-                        'BN': B.T[2],
-                        '|B|': norm}, index = time)
-        
-        return df
+
+        return pd.DataFrame(
+            {'BR': B.T[0], 'BT': B.T[1], 'BN': B.T[2], '|B|': norm}, index=time
+        )
 
 def PS_angle(distance, speed):
     """returns the parker spiral angle. This will be a negative number,
@@ -128,9 +125,6 @@ def unwrap_lons(arr, threshold=0):
         idx = np.argwhere(np.diff(arr) > threshold).flatten()[0]
     except IndexError:
         return arr
-    if isinstance(arr[0], u.Quantity):
-        val_to_subtract = 360 * u.deg
-    else:
-        val_to_subtract = 360
+    val_to_subtract = 360 * u.deg if isinstance(arr[0], u.Quantity) else 360
     arr[idx + 1 :] -= val_to_subtract
     return arr
